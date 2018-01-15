@@ -119,6 +119,9 @@ void print_help(char *arg)
        << "             To view superimposed full-atom structures of all regions with ligands:" << endl
        << "             >rasmol -script TM.sup_all_atm_lig" << endl << endl
        << "       -dir  Pass a list of PDB files located in a directory" << endl << endl
+       << "       -ter  Specify whether you want to read a PDB up to the first instance of TER," << endl
+       << "             up to the second instance of TER, or to the first instance of ENDMDL" << endl
+       << "             Pass in the integer 0 (default), 1, 2 for the options above, respectively." << endl << endl
        << "       -v    print the version of TM-align" << endl << endl
        << "       -h    print this help" << endl << endl
        << "       (Options -u, -a, -d -o won't change the final structure alignment)" << endl << endl
@@ -128,7 +131,8 @@ void print_help(char *arg)
        << "        "<< arg <<" PDB1.pdb PDB2.pdb -a T -o PDB1.sup" << endl
        << "        "<< arg <<" PDB1.pdb PDB2.pdb -i align.txt" << endl
        << "        "<< arg <<" PDB1.pdb PDB2.pdb -m matrix.txt" << endl
-       << "        "<< arg <<" PDB1.pdb list.txt -dir PDB_directory/" << endl;
+       << "        "<< arg <<" PDB1.pdb list.txt -dir PDB_directory/" << endl
+       << "        "<< arg <<" PDB1.pdb PDB2.pdb -ter 1" << endl;
        
   exit(EXIT_SUCCESS);
 
@@ -217,7 +221,9 @@ int main(int argc, char *argv[])
   /*                                get argument                                   */ 
   /*********************************************************************************/
   char xname[MAXLEN], yname[MAXLEN],  Lnorm_ave[MAXLEN];
-  bool A_opt, B_opt, h_opt, dir_opt = false;
+  bool A_opt, B_opt, h_opt = false;
+  bool dir_opt = false;
+  bool ter_opt = false;
   A_opt = B_opt = o_opt = a_opt = u_opt = d_opt = v_opt = false;
   i_opt = false;// set -i flag to be false
   m_opt = false;// set -m flag to be false
@@ -226,6 +232,7 @@ int main(int argc, char *argv[])
   char dir_path[MAXLEN];
   I_opt = false;// set -I flag to be false
   vector<string> proteins;
+  int ter_value;
 
   int nameIdx = 0;
   for(int i = 1; i < argc; i++)
@@ -266,21 +273,32 @@ int main(int argc, char *argv[])
 	{
 	  strcpy(fname_lign, argv[i + 1]);      I_opt = true; i++;
 	}
-      else if (!strcmp(argv[i], "-dir") && i < (argc-1) )
+      else if ( !strcmp(argv[i], "-dir") && i < (argc-1) )
 	{
 	  dir_opt = true;
 	  strcpy(dir_path, argv[i+1]);
+	  proteins.clear();
+	}
+      else if ( !strcmp(argv[i], "-ter") && i < (argc-1) )
+	{
+	  ter_opt = true;
+	  ter_value = atoi(argv[i+1]);
+	  if (ter_value < 0 || ter_value > 2)
+	    {
+	      cout << "Wrong value for ter. Must be either 0, 1, or 2. Run with help to learn more" << endl;
+	      exit(EXIT_FAILURE);
+	    }
 	}
       else
 	{
 	  if (nameIdx == 0)
 	    {
 	      strcpy(xname, argv[i]);      B_opt = true;
-	      proteins.push_back(xname);
 	    }
 	  else if (nameIdx == 1)
 	    {
 	      strcpy(yname, argv[i]);      A_opt = true;
+	      proteins.push_back(yname);
 	    }
 	  nameIdx++;
 	}
@@ -320,6 +338,7 @@ int main(int argc, char *argv[])
   if( dir_opt )
     {
       ifstream list(yname);
+      proteins.clear();
       string protein;
       while(getline(list, protein))
 	{
@@ -433,11 +452,10 @@ int main(int argc, char *argv[])
   for (size_t protein_idx = 0; protein_idx < proteins.size(); ++protein_idx) {
     if (dir_opt) alignment_t1 = clock();
     strcpy(yname, proteins[protein_idx].c_str());
-
     /*********************************************************************************/
     /*                                load data                                      */ 
     /*********************************************************************************/
-    load_PDB_allocate_memory(xname, yname);
+    load_PDB_allocate_memory(xname, yname, ter_value);
 
 
 
