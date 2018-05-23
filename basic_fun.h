@@ -25,6 +25,7 @@
 #include <string.h>
 #include <malloc.h>
 
+#include <map>
 #include <sstream>
 #include <iostream>
 #include <fstream>
@@ -34,7 +35,7 @@
 
 #include "basic_define.h"
 
-
+using namespace std;
 
 void PrintErrorAndQuit(char* sErrorString)
 {
@@ -226,6 +227,7 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres, int 
   string ter("TER");
   string end("END");
   string du1, i8;
+  map<string, int> resn_map;
     
   int mk = 1;
   ifstream fin (filename);
@@ -264,8 +266,24 @@ int read_PDB(char *filename, double **a, char *seq, int *resno, int **nres, int 
 		      if (line.compare(16, 1, "") != 0)
 			{
 			  i8 = line.substr(22, 4);// get index of residue
-			  const char* pi8 = i8.c_str();
-			  int numi8 = atoi(pi8);
+			  int numi8 = atoi(i8.c_str());
+			  if (resn_map.find(i8)==resn_map.end()) {
+			    numi8 = resn_map.size() + 1;
+			    resn_map[i8] = numi8;
+			  }
+			  else {
+			    numi8 = resn_map[i8];
+			  }
+
+			  stringstream i8_stream;
+			  i8_stream << numi8;
+			  i8 = i8_stream.str();
+			  if (i8.size() < 4) {
+			    i8=string(4-i8.size(), ' ')+i8;
+			  }
+			  line=line.substr(0,22)+i8+line.substr(26);
+			  
+			  
 			  if (nres[numi8][nDu1] >= 1)// atom0[i][j]: i,j index begin from one
 			    mk = -1;
 			}
